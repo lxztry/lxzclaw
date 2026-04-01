@@ -15,6 +15,7 @@ export { SessionManager } from './session/index.js';
 export { AgentEngine } from './agent/index.js';
 export { GatewayServer } from './gateway/index.js';
 export { toolRegistry } from './tools/index.js';
+export { observability } from './observability/index.js';
 
 export interface LxzClawOptions {
   config?: string;

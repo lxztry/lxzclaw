@@ -95,6 +95,15 @@ LxzClaw 是一个融合了 **OpenClaw 多通道网关架构** 与 **Claude Code 
   - Inter-agent messaging
   - Task dependencies and scheduling
 
+- **Observability System** ✅ (NEW):
+  - Task metrics and tracking
+  - Task timeline/history
+  - Structured logging
+  - Health checks (`/api/observability/health`)
+  - Metrics API (`/api/observability/metrics`)
+  - Task history API (`/api/observability/tasks`)
+  - Webhook notifications
+
 ### 4. Session & Memory
 - **Session Types**: 
   - `cli`: Interactive terminal session
@@ -112,6 +121,7 @@ LxzClaw 是一个融合了 **OpenClaw 多通道网关架构** 与 **Claude Code 
 ```
 lxzclaw/
 ├── src/
+│   ├── observability/  # Metrics, health, webhooks
 │   ├── cli/           # CLI entry point and TUI
 │   │   ├── index.ts          # Main CLI entry
 │   │   ├── commands.ts       # Command definitions

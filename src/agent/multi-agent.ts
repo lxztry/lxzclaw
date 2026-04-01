@@ -14,6 +14,7 @@ import { Config } from '../config/index.js';
 import { SessionManager } from '../session/index.js';
 import { logger } from '../utils/logger.js';
 import { randomUUID } from 'crypto';
+import { observability } from '../observability/index.js';
 
 export interface AgentConfig {
   id: string;
@@ -137,6 +138,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 
     task.status = 'in_progress';
     this.emit('task_started', task);
+    observability.startTask(task.id);
 
     try {
       const session = this.sessionManager.create({ 
@@ -152,11 +154,13 @@ export class MultiAgentCoordinator extends EventEmitter {
       task.result = result;
       task.status = 'completed';
       this.emit('task_completed', task, result);
+      observability.completeTask(task.id);
       
       return result;
     } catch (error) {
       task.status = 'failed';
       this.emit('task_failed', task, error);
+      observability.failTask(task.id, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

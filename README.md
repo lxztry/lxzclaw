@@ -135,6 +135,15 @@ await coordinator.executeTask(task.id);
 - `GET /api/sessions/:id` - Get session
 - `GET /api/tools` - List tools
 
+### Observability API
+
+- `GET /api/observability/health` - System health status
+- `GET /api/observability/metrics` - All metrics
+- `GET /api/observability/metrics?name=xxx` - Specific metric
+- `GET /api/observability/tasks` - Task history
+- `GET /api/observability/summary` - System summary
+- `POST /api/observability/webhooks` - Register webhook
+
 ### WebSocket
 
 Connect to `ws://localhost:18789` and send JSON messages:

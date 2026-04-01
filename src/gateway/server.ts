@@ -138,6 +138,42 @@ export class GatewayServer {
       res.json({ received: true, channel });
     });
 
+    // Observability endpoints
+    this.app.get('/api/observability/health', (_req, res) => {
+      const { observability } = require('../observability/index.js');
+      const agents = this.sessionManager.listSessions().length;
+      res.json(observability.getHealthStatus(agents));
+    });
+
+    this.app.get('/api/observability/metrics', (req, res) => {
+      const { observability } = require('../observability/index.js');
+      const since = req.query.since ? parseInt(req.query.since as string) : undefined;
+      if (req.query.name) {
+        res.json({ metrics: observability.getMetrics(req.query.name as string, since) });
+      } else {
+        res.json(observability.getAllMetrics());
+      }
+    });
+
+    this.app.get('/api/observability/tasks', (req, res) => {
+      const { observability } = require('../observability/index.js');
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const since = req.query.since ? parseInt(req.query.since as string) : undefined;
+      res.json({ tasks: observability.getTaskHistory(limit, since) });
+    });
+
+    this.app.get('/api/observability/summary', (_req, res) => {
+      const { observability } = require('../observability/index.js');
+      res.json(observability.getSummary());
+    });
+
+    this.app.post('/api/observability/webhooks', (req, res) => {
+      const { observability } = require('../observability/index.js');
+      const { url, events, headers } = req.body;
+      observability.registerWebhook({ url, events: events ?? ['*'], headers });
+      res.json({ success: true });
+    });
+
     // Serve static web UI
     const staticPath = path.join(process.cwd(), 'src', 'web', 'static');
     this.app.use(express.static(staticPath));
