@@ -11,6 +11,7 @@ import { SessionManager } from '../session/index.js';
 import { AgentEngine } from '../agent/index.js';
 import { WSHandler } from './ws-handler.js';
 import { logger } from '../utils/logger.js';
+import { AuthManager, RateLimiter } from '../auth/index.js';
 
 export class GatewayServer {
   private app: express.Application;
@@ -20,12 +21,22 @@ export class GatewayServer {
   private config: Config;
   private agent: AgentEngine;
   private sessionManager: SessionManager;
+  private authManager: AuthManager;
+  private rateLimiter: RateLimiter;
 
   constructor(config: Config, agent: AgentEngine, sessionManager: SessionManager) {
     this.config = config;
     this.agent = agent;
     this.sessionManager = sessionManager;
     this.app = express();
+    
+    // Initialize auth
+    this.authManager = new AuthManager({
+      enabled: !!config.gateway.authToken,
+      tokens: config.gateway.authToken ? [config.gateway.authToken] : undefined,
+    });
+    this.rateLimiter = new RateLimiter(60000, 100);
+    
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -56,25 +67,64 @@ export class GatewayServer {
       next();
     });
 
+    // Rate limiting middleware
+    this.app.use((req, res, next) => {
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() 
+        ?? req.socket.remoteAddress 
+        ?? 'unknown';
+      
+      const result = this.rateLimiter.check(clientIp);
+      res.setHeader('X-RateLimit-Limit', String(this.rateLimiter['max']));
+      res.setHeader('X-RateLimit-Remaining', String(result.remaining));
+      res.setHeader('X-RateLimit-Reset', String(result.resetAt));
+      
+      if (!result.allowed) {
+        res.status(429).json({ error: 'Rate limit exceeded', retryAfter: result.resetAt });
+        return;
+      }
+      next();
+    });
+
     // Auth middleware
-    if (this.config.gateway.authToken) {
-      this.app.use((req, res, next) => {
-        if (req.path === '/health') return next();
-        
-        const auth = req.headers.authorization;
-        if (auth !== `Bearer ${this.config.gateway.authToken}`) {
-          res.status(401).json({ error: 'Unauthorized' });
-          return;
-        }
-        next();
-      });
-    }
+    this.app.use((req, res, next) => {
+      // Public endpoints
+      if (req.path === '/health' || req.path === '/') {
+        return next();
+      }
+
+      const authResult = this.authManager.authenticate(req.headers.authorization);
+      if (!authResult.success) {
+        res.status(401).json({ error: authResult.error ?? 'Unauthorized' });
+        return;
+      }
+      
+      // Attach auth info to request
+      (req as typeof req & { auth: typeof authResult }).auth = authResult;
+      next();
+    });
   }
 
   private setupRoutes(): void {
     // Health check
     this.app.get('/health', (_req, res) => {
       res.json({ status: 'ok', timestamp: Date.now() });
+    });
+
+    // Auth endpoints
+    this.app.post('/api/auth/token', (req: express.Request, res: express.Response) => {
+      const { userId, name, expiresIn, scopes } = req.body;
+      const token = this.authManager.generateToken({
+        userId: userId ?? 'default',
+        name,
+        expiresIn,
+        scopes,
+      });
+      res.json({ token, message: 'Store this token securely - it will not be shown again' });
+    });
+
+    this.app.get('/api/auth/tokens', (_req, res) => {
+      const tokens = this.authManager.listTokens();
+      res.json({ tokens });
     });
 
     // REST API for chat

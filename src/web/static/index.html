@@ -1,170 +1,678 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LxzClaw</title>
+  <title>LxzClaw Dashboard</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e; color: #eee; height: 100vh; display: flex;
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --border: #475569;
     }
-    .sidebar { width: 260px; background: #16213e; padding: 20px; border-right: 1px solid #0f3460; }
-    .sidebar h1 { font-size: 1.4em; margin-bottom: 20px; color: #10b981; }
-    .sidebar button { width: 100%; padding: 10px; margin-bottom: 10px; background: #0f3460; border: none; color: #fff; border-radius: 6px; cursor: pointer; }
-    .sidebar button:hover { background: #1a4a7a; }
-    .chat-area { flex: 1; display: flex; flex-direction: column; }
-    .messages { flex: 1; overflow-y: auto; padding: 20px; }
-    .message { margin-bottom: 16px; max-width: 80%; }
-    .message.user { margin-left: auto; background: #3b82f6; border-radius: 12px 12px 4px 12px; padding: 12px 16px; }
-    .message.assistant { background: #2d3748; border-radius: 12px 12px 12px 4px; padding: 12px 16px; }
-    .message .role { font-size: 0.75em; color: #10b981; margin-bottom: 4px; }
-    .message.user .role { color: #93c5fd; }
-    .message pre { background: #1a1a2e; padding: 8px; border-radius: 4px; margin-top: 8px; overflow-x: auto; font-size: 0.9em; }
-    .input-area { padding: 20px; background: #16213e; border-top: 1px solid #0f3460; }
-    .input-area textarea { width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; color: #fff; resize: none; height: 80px; }
-    .input-area button { margin-top: 10px; padding: 10px 24px; background: #10b981; border: none; border-radius: 6px; color: #fff; cursor: pointer; }
-    .input-area button:hover { background: #059669; }
-    .input-area button:disabled { background: #4a5568; cursor: not-allowed; }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-primary); 
+      color: var(--text-primary); 
+      height: 100vh; 
+      overflow: hidden;
+    }
+    
+    .app { display: flex; height: 100vh; }
+    
+    /* Sidebar */
+    .sidebar { 
+      width: 260px; 
+      background: var(--bg-secondary); 
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .sidebar-header h1 { 
+      font-size: 1.3em; 
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .sidebar-nav { padding: 16px; flex: 1; }
+    
+    .nav-item {
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    
+    .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .nav-item.active { background: var(--accent); color: white; }
+    
+    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); font-size: 0.85em; color: var(--text-secondary); }
+    
+    /* Main content */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    
+    /* Header */
+    .header {
+      padding: 16px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h2 { font-size: 1.1em; font-weight: 600; }
+    
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-badge.healthy { background: rgba(16, 185, 129, 0.2); color: var(--accent); }
+    .status-badge.degraded { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .status-badge.unhealthy { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+    
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor;
+    }
+    
+    /* Content area */
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+    
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+    
+    .card-header { display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .card-title { font-weight: 600; color: var(--text-primary); }
+    
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    
+    .stat-value { font-size: 2em; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 0.85em; color: var(--text-secondary); margin-top: 4px; }
+    
+    /* Metrics */
+    .metrics-list { display: flex; flex-direction: column; gap: 12px; }
+    
+    .metric-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+    
+    .metric-name { font-weight: 500; }
+    .metric-value { color: var(--accent); font-weight: 600; }
+    
+    /* Task list */
+    .task-list { display: flex; flex-direction: column; gap: 8px; }
+    
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+    
+    .task-status {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    
+    .task-status.completed { background: var(--accent); }
+    .task-status.failed { background: var(--error); }
+    .task-status.in_progress { background: var(--info); animation: pulse 1s infinite; }
+    .task-status.pending { background: var(--text-secondary); }
+    
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
+    .task-info { flex: 1; }
+    .task-id { font-size: 0.8em; color: var(--text-secondary); }
+    .task-time { font-size: 0.8em; color: var(--text-secondary); }
+    
+    /* Chat area */
+    .chat-container { display: flex; flex-direction: column; height: 100%; }
+    
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
+    
+    .message {
+      margin-bottom: 16px;
+      max-width: 75%;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } }
+    
+    .message.user { margin-left: auto; }
+    .message.user .message-content { background: var(--info); border-radius: 16px 16px 4px 16px; }
+    .message.assistant .message-content { background: var(--bg-tertiary); border-radius: 16px 16px 16px 4px; }
+    
+    .message-content { padding: 12px 16px; color: white; }
+    .message-meta { font-size: 0.75em; color: var(--text-secondary); margin-top: 4px; padding: 0 4px; }
+    
+    .chat-input-area {
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.95em;
+      resize: none;
+    }
+    
+    .chat-input:focus { outline: none; border-color: var(--accent); }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { background: var(--bg-tertiary); cursor: not-allowed; }
+    
+    /* Agent list */
+    .agent-list { display: flex; flex-direction: column; gap: 12px; }
+    
+    .agent-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+    }
+    
+    .agent-avatar {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    
+    .agent-info { flex: 1; }
+    .agent-name { font-weight: 600; margin-bottom: 4px; }
+    .agent-role { font-size: 0.85em; color: var(--text-secondary); }
+    .agent-caps { font-size: 0.8em; color: var(--accent); }
+    
+    /* Loading spinner */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--bg-tertiary);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+    
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h1>🦞 LxzClaw</h1>
-    <button onclick="newSession()">New Session</button>
-    <button onclick="clearMessages()">Clear</button>
-    <div style="margin-top: 20px; font-size: 0.85em; color: #888;">
-      <p>Session: <span id="sessionId">-</span></p>
-      <p>Status: <span id="status">Disconnected</span></p>
+  <div class="app">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>🦞 LxzClaw</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-view="dashboard">
+          <span>📊</span> Dashboard
+        </div>
+        <div class="nav-item" data-view="chat">
+          <span>💬</span> Chat
+        </div>
+        <div class="nav-item" data-view="agents">
+          <span>🤖</span> Agents
+        </div>
+        <div class="nav-item" data-view="tasks">
+          <span>📋</span> Tasks
+        </div>
+        <div class="nav-item" data-view="metrics">
+          <span>📈</span> Metrics
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>Session: <span id="sessionId">-</span></div>
+        <div style="margin-top: 4px;">
+          <span id="wsStatus" class="status-badge degraded">
+            <span class="status-dot"></span> Disconnected
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Header -->
+      <div class="header">
+        <h2 id="viewTitle">Dashboard</h2>
+        <div id="healthStatus" class="status-badge healthy">
+          <span class="status-dot"></span> Healthy
+        </div>
+      </div>
+      
+      <!-- Content -->
+      <div class="content">
+        <!-- Dashboard View -->
+        <div id="dashboardView">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="statActiveAgents">0</div>
+              <div class="stat-label">Active Agents</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statTotalTasks">0</div>
+              <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statCompletedTasks">0</div>
+              <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statAvgDuration">0ms</div>
+              <div class="stat-label">Avg Duration</div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent Tasks</span>
+            </div>
+            <div class="task-list" id="recentTasks">
+              <div class="empty-state">No tasks yet</div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Quick Stats</span>
+            </div>
+            <div class="metrics-list" id="quickMetrics">
+              <div class="empty-state">Loading...</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chat View -->
+        <div id="chatView" class="hidden">
+          <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+              <textarea class="chat-input" id="chatInput" placeholder="Type your message..." rows="1"></textarea>
+              <button class="btn btn-primary" id="chatSendBtn">Send</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Agents View -->
+        <div id="agentsView" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Registered Agents</span>
+            </div>
+            <div class="agent-list" id="agentList">
+              <div class="empty-state">No agents registered</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tasks View -->
+        <div id="tasksView" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Task History</span>
+            </div>
+            <div class="task-list" id="taskHistory">
+              <div class="empty-state">No task history</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Metrics View -->
+        <div id="metricsView" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">All Metrics</span>
+            </div>
+            <div class="metrics-list" id="allMetrics">
+              <div class="empty-state">No metrics recorded</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="chat-area">
-    <div class="messages" id="messages"></div>
-    <div class="input-area">
-      <textarea id="input" placeholder="Type your message..."></textarea>
-      <button id="sendBtn" onclick="sendMessage()">Send</button>
-    </div>
-  </div>
+
   <script>
+    // State
     let ws = null;
     let sessionId = null;
-    const messagesDiv = document.getElementById('messages');
-    const input = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
-    const statusSpan = document.getElementById('status');
-    const sessionIdSpan = document.getElementById('sessionId');
-
+    let currentView = 'dashboard';
+    let healthInterval = null;
+    
+    // DOM Elements
+    const views = {
+      dashboard: document.getElementById('dashboardView'),
+      chat: document.getElementById('chatView'),
+      agents: document.getElementById('agentsView'),
+      tasks: document.getElementById('tasksView'),
+      metrics: document.getElementById('metricsView'),
+    };
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const view = item.dataset.view;
+        switchView(view);
+      });
+    });
+    
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelector(`[data-view="${view}"]`).classList.add('active');
+      
+      Object.values(views).forEach(v => v.classList.add('hidden'));
+      views[view].classList.remove('hidden');
+      
+      document.getElementById('viewTitle').textContent = {
+        dashboard: 'Dashboard',
+        chat: 'Chat',
+        agents: 'Agents',
+        tasks: 'Tasks',
+        metrics: 'Metrics'
+      }[view];
+      
+      if (view === 'dashboard') loadDashboard();
+      if (view === 'tasks') loadTasks();
+      if (view === 'metrics') loadMetrics();
+    }
+    
+    // WebSocket
     function connect() {
-      ws = new WebSocket(`ws://${location.host}`);
-      statusSpan.textContent = 'Connecting...';
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+      
+      updateWsStatus('connecting');
       
       ws.onopen = () => {
-        statusSpan.textContent = 'Connected';
+        updateWsStatus('connected');
         createSession();
       };
       
       ws.onclose = () => {
-        statusSpan.textContent = 'Disconnected';
-        setTimeout(connect, 2000);
+        updateWsStatus('disconnected');
+        setTimeout(connect, 3000);
       };
       
       ws.onerror = (e) => console.error('WS Error:', e);
       
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'chunk') {
-          appendChunk(msg.payload.chunk);
-        } else if (msg.type === 'response') {
-          finalizeAssistant();
-        }
+        handleMessage(msg);
       };
     }
-
+    
+    function updateWsStatus(status) {
+      const el = document.getElementById('wsStatus');
+      if (status === 'connected') {
+        el.className = 'status-badge healthy';
+        el.innerHTML = '<span class="status-dot"></span> Connected';
+      } else if (status === 'connecting') {
+        el.className = 'status-badge degraded';
+        el.innerHTML = '<span class="status-dot"></span> Connecting...';
+      } else {
+        el.className = 'status-badge unhealthy';
+        el.innerHTML = '<span class="status-dot"></span> Disconnected';
+      }
+    }
+    
     function createSession() {
       ws.send(JSON.stringify({ type: 'create_session', payload: { type: 'chat' } }));
-      ws.onmessage = function handler(event) {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'session_created') {
-          sessionId = msg.payload.sessionId;
-          sessionIdSpan.textContent = sessionId.substring(0, 8) + '...';
-          ws.onmessage = originalHandler;
-        }
-      };
+      ws.send(JSON.stringify({ type: 'session_created' }));
     }
-
-    function originalHandler(event) {
+    
+    let originalHandler = null;
+    ws && (ws.onmessage = function handler(event) {
       const msg = JSON.parse(event.data);
+      if (msg.type === 'session_created' && msg.payload?.sessionId) {
+        sessionId = msg.payload.sessionId;
+        document.getElementById('sessionId').textContent = sessionId.substring(0, 8) + '...';
+        ws.onmessage = originalHandler || handler;
+        loadDashboard();
+        startHealthCheck();
+      } else {
+        handleMessage(msg);
+      }
+    });
+    
+    function handleMessage(msg) {
       if (msg.type === 'chunk') {
-        appendChunk(msg.payload.chunk);
+        appendChatChunk(msg.payload.chunk);
       } else if (msg.type === 'response') {
         finalizeAssistant();
+      } else if (msg.type === 'message') {
+        appendChatMessage(msg.payload.role, msg.payload.content);
       }
     }
-
-    function appendChunk(text) {
-      let last = messagesDiv.lastElementChild;
-      if (!last?.classList.contains('assistant') || last.dataset.finalized === 'true') {
-        last = document.createElement('div');
-        last.className = 'message assistant';
-        last.innerHTML = '<div class="role">Assistant</div><div class="content"></div>';
-        messagesDiv.appendChild(last);
-      }
-      last.querySelector('.content').textContent += text;
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function finalizeAssistant() {
-      let last = messagesDiv.lastElementChild;
-      if (last?.classList.contains('assistant')) {
-        last.dataset.finalized = 'true';
-      }
-      sendBtn.disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-
-    function addMessage(role, content) {
+    
+    // Chat
+    function appendChatMessage(role, content) {
+      const messages = document.getElementById('chatMessages');
       const div = document.createElement('div');
       div.className = `message ${role}`;
-      div.innerHTML = `<div class="role">${role === 'user' ? 'You' : 'Assistant'}</div><div class="content">${escapeHtml(content)}</div>`;
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      div.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
     }
-
+    
+    let assistantDiv = null;
+    let assistantContent = '';
+    
+    function appendChatChunk(text) {
+      if (!assistantDiv) {
+        assistantDiv = document.createElement('div');
+        assistantDiv.className = 'message assistant';
+        assistantDiv.innerHTML = '<div class="message-content"></div>';
+        document.getElementById('chatMessages').appendChild(assistantDiv);
+      }
+      assistantContent += text;
+      assistantDiv.querySelector('.message-content').textContent = assistantContent;
+    }
+    
+    function finalizeAssistant() {
+      assistantDiv = null;
+      assistantContent = '';
+    }
+    
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      
+      input.value = '';
+      appendChatMessage('user', text);
+      
+      ws.send(JSON.stringify({ 
+        type: 'chat', 
+        payload: { message: text, sessionId } 
+      }));
+    }
+    
+    document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+    
+    // Dashboard
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/observability/health');
+        const health = await res.json();
+        
+        document.getElementById('healthStatus').className = `status-badge ${health.status}`;
+        document.getElementById('healthStatus').innerHTML = `<span class="status-dot"></span> ${health.status}`;
+        
+        document.getElementById('statActiveAgents').textContent = health.metrics.activeAgents;
+        document.getElementById('statTotalTasks').textContent = health.metrics.totalTasks;
+        document.getElementById('statCompletedTasks').textContent = health.metrics.completedTasks;
+        document.getElementById('statAvgDuration').textContent = health.metrics.avgTaskDuration + 'ms';
+        
+        const summary = await (await fetch('/api/observability/summary')).json();
+        document.getElementById('statTotalTasks').textContent = summary.taskHistoryCount;
+      } catch (e) {
+        console.error('Failed to load dashboard:', e);
+      }
+    }
+    
+    async function loadTasks() {
+      try {
+        const res = await fetch('/api/observability/tasks?limit=20');
+        const data = await res.json();
+        
+        const container = document.getElementById('taskHistory');
+        if (!data.tasks?.length) {
+          container.innerHTML = '<div class="empty-state">No task history</div>';
+          return;
+        }
+        
+        container.innerHTML = data.tasks.map(task => `
+          <div class="task-item">
+            <div class="task-status ${task.type === 'completed' ? 'completed' : task.type === 'failed' ? 'failed' : task.type === 'started' ? 'in_progress' : 'pending'}"></div>
+            <div class="task-info">
+              <div class="task-id">${task.taskId.substring(0, 8)}...</div>
+            </div>
+            <div class="task-time">${formatTime(task.timestamp)}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load tasks:', e);
+      }
+    }
+    
+    async function loadMetrics() {
+      try {
+        const res = await fetch('/api/observability/metrics');
+        const metrics = await res.json();
+        
+        const container = document.getElementById('allMetrics');
+        const allMetrics = Object.entries(metrics);
+        
+        if (!allMetrics.length) {
+          container.innerHTML = '<div class="empty-state">No metrics recorded</div>';
+          return;
+        }
+        
+        container.innerHTML = allMetrics.map(([name, items]) => 
+          items.map(item => `
+            <div class="metric-item">
+              <span class="metric-name">${name}</span>
+              <span class="metric-value">${item.value}</span>
+            </div>
+          `).join('')
+        ).join('');
+      } catch (e) {
+        console.error('Failed to load metrics:', e);
+      }
+    }
+    
+    function startHealthCheck() {
+      if (healthInterval) clearInterval(healthInterval);
+      healthInterval = setInterval(loadDashboard, 10000);
+    }
+    
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML.replace(/\n/g, '<br>');
     }
-
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      sendBtn.disabled = true;
-      input.disabled = true;
-      addMessage('user', text);
-      ws.send(JSON.stringify({ type: 'chat', payload: { message: text, sessionId } }));
+    
+    function formatTime(ts) {
+      return new Date(ts).toLocaleTimeString();
     }
-
-    function newSession() {
-      messagesDiv.innerHTML = '';
-      createSession();
-    }
-
-    function clearMessages() {
-      messagesDiv.innerHTML = '';
-    }
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
+    
+    // Initialize
     connect();
+    loadDashboard();
   </script>
 </body>
 </html>

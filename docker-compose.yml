@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  lxzclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lxzclaw
+    ports:
+      - "18789:18789"
+    environment:
+      - NODE_ENV=production
+      - LXZ_ANTHROPIC_API_KEY=${LXZ_ANTHROPIC_API_KEY}
+      - LXZ_LLM_PROVIDER=anthropic
+      - LXZ_MODEL=claude-sonnet-4-20250514
+      - LXZ_GATEWAY_PORT=18789
+      - LXZ_HOME=/app/.lxzclaw
+    volumes:
+      - lxzclaw-data:/app/.lxzclaw
+      - lxzclaw-skills:/app/skills
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:18789/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  lxzclaw-data:
+    driver: local
+  lxzclaw-skills:
+    driver: local
