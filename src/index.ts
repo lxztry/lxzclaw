@@ -6,7 +6,8 @@ import { loadConfig } from './config/index.js';
 import { SessionManager } from './session/index.js';
 import { AgentEngine } from './agent/index.js';
 import { GatewayServer } from './gateway/index.js';
-import { registerBuiltInTools } from './tools/index.js';
+import { registerBuiltInTools, toolRegistry } from './tools/index.js';
+import { mcpClient } from './mcp/index.js';
 import { logger, setLogLevel, LogLevel } from './utils/logger.js';
 
 export { Config } from './config/index.js';
@@ -45,6 +46,27 @@ export async function createLxzClaw(options: LxzClawOptions = {}): Promise<{
 
   const agent = new AgentEngine(config, sessionManager);
   registerBuiltInTools();
+  
+  // Initialize MCP servers
+  if (config.mcp) {
+    for (const [name, mcpConfig] of Object.entries(config.mcp)) {
+      if (mcpConfig.enabled !== false) {
+        try {
+          await mcpClient.connectServer(name, mcpConfig);
+          // Register MCP tools
+          for (const tool of mcpClient.listTools()) {
+            const existingTool = toolRegistry.get(tool.name);
+            if (!existingTool) {
+              toolRegistry.register(tool);
+            }
+          }
+        } catch (error) {
+          logger.warn(`Failed to connect MCP server ${name}: ${error}`);
+        }
+      }
+    }
+  }
+  
   await agent.init();
 
   let gateway: GatewayServer | undefined;

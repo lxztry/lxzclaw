@@ -70,6 +70,12 @@ export const ConfigSchema = z.object({
   tools: ToolConfigSchema,
   session: SessionConfigSchema,
   channels: z.record(z.string(), ChannelConfigSchema),
+  mcp: z.record(z.string(), z.object({
+    command: z.string(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    enabled: z.boolean().default(true),
+  })).optional(),
   logging: z.object({
     level: z.enum(['debug', 'info', 'warn', 'error']),
     file: z.string().optional(),
@@ -108,6 +114,7 @@ export const defaultConfig: Config = {
     maxHistory: 100,
   },
   channels: {},
+  mcp: {},
   logging: {
     level: 'info',
   },

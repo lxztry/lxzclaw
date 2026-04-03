@@ -96,6 +96,9 @@ export async function loadConfig(): Promise<Config> {
   if (fileConfig.logging) {
     result.logging = { ...defaultConfig.logging, ...fileConfig.logging };
   }
+  if (fileConfig.mcp) {
+    result.mcp = fileConfig.mcp;
+  }
 
   // Apply env config
   if (process.env.LXZ_GATEWAY_PORT) {
