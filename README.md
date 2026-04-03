@@ -6,8 +6,11 @@
 
 ### 🎯 Core Capabilities
 - **多LLM Provider**: 支持 Anthropic、MiniMax、GLM、OpenRouter、OpenAI 等
-- **多通道接入**: CLI / Web UI / WebSocket
+- **MCP 支持**: 可连接 Model Context Protocol 服务器，扩展工具能力
+- **多通道接入**: CLI / Web UI / WebSocket / Discord / Telegram / 飞书
 - **工具系统**: bash, read, write, edit, glob, web搜索
+- **智能Agent**: 反思机制、自动重试、任务规划
+- **Skills系统**: 热加载技能模块，支持依赖管理
 - **会话管理**: 持久化会话历史，支持多种会话类型
 
 ### 🏗️ Architecture
@@ -16,9 +19,12 @@
 LxzClaw
 ├── Gateway Server (HTTP + WebSocket)
 ├── Agent Engine (LLM + Tools)
+│   ├── Smart Agent (反思/重试/规划)
+│   └── MCP Client (协议支持)
 ├── Multi-Agent Coordinator
-├── Channel Plugins (CLI, Web)
-└── Skill System (Hot-loadable)
+├── Channel Plugins (CLI, Web, Discord, Telegram, Feishu)
+├── Skill System (Hot-loadable, 依赖管理)
+└── Audit Logger (安全审计)
 ```
 
 ## Quick Start
@@ -174,6 +180,76 @@ LXZ_MODEL=claude-sonnet-4-20250514
 | `web_fetch` | 获取URL内容 | ❌ |
 
 > 注：敏感操作 (bash, write, edit) 会记录到审计日志
+
+## MCP 支持
+
+通过 MCP (Model Context Protocol) 扩展工具能力。在配置文件中添加：
+
+```json
+{
+  "mcp": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/docs"],
+      "enabled": true
+    }
+  }
+}
+```
+
+或使用环境变量：
+```bash
+LXZ_MCP_FILESYSTEM_COMMAND=npx
+LXZ_MCP_FILESYSTEM_ARGS=["-y", "@modelcontextprotocol/server-filesystem", "~/docs"]
+```
+
+## Skills 系统
+
+Skills 是热加载的模块，扩展 Agent 能力。
+
+### 创建 Skill
+
+在 `skills/` 目录下创建：
+
+```typescript
+// skills/hello/index.ts
+export default {
+  skill: {
+    name: 'hello',
+    description: '打招呼技能',
+    version: '1.0.0',
+    author: 'Your Name',
+    tags: ['utility'],
+    dependencies: {},
+  },
+  async execute(input: unknown) {
+    return `Hello, ${input}!`;
+  },
+};
+```
+
+### Skill 特性
+
+- **热加载**: 修改后自动重载
+- **依赖管理**: 支持技能间依赖
+- **Tag 分类**: 按标签查询
+
+## 智能 Agent
+
+- **自动重试**: 工具失败时自动重试 (指数退避)
+- **反思机制**: 分析工具失败原因，提供改进建议
+- **任务规划**: 复杂任务自动分解为步骤
+
+## 通道集成
+
+| 通道 | 说明 |
+|------|------|
+| CLI | 交互式终端 |
+| Web UI | 浏览器界面 (http://localhost:18789) |
+| WebSocket | 实时消息 |
+| Discord | Discord Bot |
+| Telegram | Telegram Bot |
+| 飞书 | 飞书消息 (beta) |
 
 ## API 接口
 
