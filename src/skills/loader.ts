@@ -16,12 +16,15 @@ export interface SkillConfig {
   description: string;
   version: string;
   author?: string;
+  dependencies?: Record<string, string>;  // Skill dependencies
+  tags?: string[];
 }
 
 export interface SkillMetadata extends SkillConfig {
   path: string;
   loadedAt: number;
   enabled: boolean;
+  dependencies?: Record<string, string>;
 }
 
 export interface SkillModule {
@@ -134,12 +137,24 @@ export class SkillLoader extends EventEmitter {
         return false;
       }
 
+      // Resolve dependencies first
+      if (skillModule.skill.dependencies) {
+        for (const [depName, depVersion] of Object.entries(skillModule.skill.dependencies)) {
+          if (!this.skills.has(depName)) {
+            logger.warn(`Skill ${skillName} depends on ${depName} which is not loaded`);
+          } else {
+            logger.debug(`Skill ${skillName} depends on ${depName} (${depVersion})`);
+          }
+        }
+      }
+
       this.skillModules.set(skillName, skillModule);
       this.skills.set(skillName, {
         ...skillModule.skill,
         path: skillPath,
         loadedAt: Date.now(),
         enabled: true,
+        dependencies: skillModule.skill.dependencies,
       });
 
       // Call onLoad hook if present
@@ -155,6 +170,46 @@ export class SkillLoader extends EventEmitter {
       logger.error(`Failed to load skill ${skillName}: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Get skill dependency tree
+   */
+  getDependencyTree(skillName: string): string[] {
+    const tree: string[] = [];
+    const visited = new Set<string>();
+    
+    const traverse = (name: string) => {
+      if (visited.has(name)) return;
+      visited.add(name);
+      
+      const meta = this.skills.get(name);
+      if (!meta) return;
+      
+      tree.push(name);
+      
+      if (meta.dependencies) {
+        for (const depName of Object.keys(meta.dependencies)) {
+          traverse(depName);
+        }
+      }
+    };
+    
+    traverse(skillName);
+    return tree;
+  }
+
+  /**
+   * List skills by tag
+   */
+  listByTag(tag: string): SkillMetadata[] {
+    const result: SkillMetadata[] = [];
+    for (const [_name, meta] of this.skills) {
+      if (meta.tags?.includes(tag)) {
+        result.push(meta);
+      }
+    }
+    return result;
   }
 
   async unloadSkill(skillName: string): Promise<boolean> {
