@@ -9,13 +9,54 @@ import { logger } from '../../utils/logger.js';
 
 const execAsync = promisify(exec);
 
+const DANGEROUS_PATTERNS = [
+  /rm\s+-rf/i,
+  /del\s+\/[sqf]/i,
+  /format\s+/i,
+  /mkfs/i,
+  /dd\s+if=/i,
+  />\s*\/dev\/sd/i,
+  /chmod\s+777/i,
+  /chown\s+-r/i,
+  /curl.*\|\s*bash/i,
+  /wget.*\|\s*bash/i,
+  /powershell.*-enc/i,
+  /:\s*!\s*\/bin\/sh/i,
+  /fork\(\)/i,
+];
+
+const ALLOWED_COMMANDS = new Set([
+  'git', 'npm', 'node', 'pnpm', 'yarn', 'bun',
+  'ls', 'dir', 'cat', 'type', 'echo', 'pwd', 'cd',
+  'mkdir', 'rmdir', 'copy', 'move', 'del', 'rm',
+  'find', 'grep', 'ag', 'rg', 'head', 'tail', 'wc',
+  'sort', 'uniq', 'awk', 'sed', 'cut', 'tr',
+  'curl', 'wget', 'tar', 'zip', 'unzip',
+  'python', 'python3', 'pip', 'uv',
+  'go', 'cargo', 'rustc', 'make', 'cmake',
+  'docker', 'kubectl', 'helm',
+  'code', 'code-insiders', 'cursor',
+]);
+
+function isCommandAllowed(command: string): boolean {
+  const cmd = command.trim().split(/\s+/)[0].toLowerCase();
+  const baseCmd = cmd.replace(/^python\d*/, 'python').replace(/^node\d*/, 'node');
+  return ALLOWED_COMMANDS.has(baseCmd) || ALLOWED_COMMANDS.has(cmd);
+}
+
+function hasDangerousPattern(command: string): boolean {
+  return DANGEROUS_PATTERNS.some(pattern => pattern.test(command));
+}
+
 export function createBashTool(options: {
   enabled?: boolean;
   timeout?: number;
   shell?: string;
+  allowDangerous?: boolean;
 } = {}): Tool {
   const timeout = options.timeout ?? 30000;
   const shell = options.shell ?? (process.platform === 'win32' ? 'cmd.exe' : '/bin/bash');
+  const allowDangerous = options.allowDangerous ?? false;
 
   return {
     name: 'bash',
@@ -33,6 +74,21 @@ export function createBashTool(options: {
     async execute(input: unknown, context: ToolContext): Promise<ToolResult> {
       const { command, timeout: inputTimeout, cwd } = input as { command: string; timeout?: number; cwd?: string };
       const execTimeout = inputTimeout ?? timeout;
+
+      if (!allowDangerous) {
+        if (!isCommandAllowed(command)) {
+          return {
+            success: false,
+            error: `Command not allowed: ${command.split(' ')[0]}. Use only safe commands like git, npm, node, ls, etc.`,
+          };
+        }
+        if (hasDangerousPattern(command)) {
+          return {
+            success: false,
+            error: 'Dangerous command pattern detected. This command is not allowed for security reasons.',
+          };
+        }
+      }
 
       logger.debug(`Executing bash: ${command}`);
 

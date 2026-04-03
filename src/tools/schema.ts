@@ -16,6 +16,7 @@ export interface Tool {
   description: string;
   inputSchema: Record<string, unknown>;
   execute(input: unknown, context: ToolContext): Promise<ToolResult>;
+  requireConfirm?: boolean;  // 需要用户确认才能执行
 }
 
 export interface ToolContext {

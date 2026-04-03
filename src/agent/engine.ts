@@ -43,12 +43,6 @@ export class AgentEngine extends EventEmitter {
       throw new Error(`Session not found: ${sessionId}`);
     }
 
-    // Add user message
-    this.sessionManager.addMessage(sessionId, {
-      role: 'user',
-      content,
-    });
-
     // Build messages for LLM
     const messages: Array<{ role: string; content: string }> = [];
 
@@ -58,6 +52,7 @@ export class AgentEngine extends EventEmitter {
 
     // Add conversation history
     const history = this.sessionManager.getHistory(sessionId, 50);
+    logger.debug(`History: ${history.length} messages`);
     for (const msg of history) {
       const msgContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
       messages.push({
@@ -65,6 +60,10 @@ export class AgentEngine extends EventEmitter {
         content: msgContent,
       });
     }
+
+    // Add current user message
+    messages.push({ role: 'user', content });
+    logger.debug(`LLM messages count: ${messages.length}`);
 
     // Get available tools
     const tools = toolRegistry.getToolSchemas();

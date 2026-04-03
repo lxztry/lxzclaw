@@ -7,7 +7,7 @@ import os from 'os';
 import path from 'path';
 
 // LLM Provider schema
-export const LLMProviderSchema = z.enum(['anthropic', 'minimax', 'openai', 'openai-compatible']);
+export const LLMProviderSchema = z.enum(['anthropic', 'minimax', 'openai', 'openai-compatible', 'openrouter', 'kimi', 'glm']);
 export type LLMProvider = z.infer<typeof LLMProviderSchema>;
 
 // Gateway config

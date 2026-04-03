@@ -30,6 +30,9 @@ export function createLLMProvider(config: LLMConfig): LLMProvider {
     case 'minimax':
     case 'openai':
     case 'openai-compatible':
+    case 'openrouter':
+    case 'kimi':
+    case 'glm':
       return new MiniMaxProvider(config);
     default:
       throw new Error(`Unknown LLM provider: ${config.provider}`);

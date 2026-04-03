@@ -164,8 +164,7 @@ export class WSHandler {
         break;
       }
 
-      default:
-        logger.warn(`Unknown WS message type: ${message.type}`);
+      // Unknown message types - ignore silently (may be client-specific extensions)
     }
   }
 

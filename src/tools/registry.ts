@@ -4,6 +4,7 @@
 
 import { Tool, ToolResult, ToolContext } from './schema.js';
 import { logger } from '../utils/logger.js';
+import { auditLogger } from '../utils/audit.js';
 
 export class ToolRegistry {
   private tools: Map<string, Tool> = new Map();
@@ -55,6 +56,16 @@ export class ToolRegistry {
 
     try {
       const result = await tool.execute(input, context);
+      
+      // Audit log
+      await auditLogger.toolExecute(
+        name,
+        context.sessionId,
+        (input as Record<string, unknown>) ?? {},
+        result.success,
+        result.error
+      );
+      
       return result;
     } catch (error) {
       return {

@@ -5,9 +5,9 @@
 ## Features
 
 ### 🎯 Core Capabilities
-- **多通道接入**: CLI / Web UI / 飞书 / WebSocket
+- **多LLM Provider**: 支持 Anthropic、MiniMax、GLM、OpenRouter、OpenAI 等
+- **多通道接入**: CLI / Web UI / WebSocket
 - **工具系统**: bash, read, write, edit, glob, web搜索
-- **多Agent协同**: Supervisor/Worker模式，支持并行任务执行
 - **会话管理**: 持久化会话历史，支持多种会话类型
 
 ### 🏗️ Architecture
@@ -17,155 +17,219 @@ LxzClaw
 ├── Gateway Server (HTTP + WebSocket)
 ├── Agent Engine (LLM + Tools)
 ├── Multi-Agent Coordinator
-├── Channel Plugins (Feishu, CLI, Web)
+├── Channel Plugins (CLI, Web)
 └── Skill System (Hot-loadable)
 ```
 
 ## Quick Start
 
-### Installation
+### 1. 安装
 
 ```bash
+# 克隆项目
 git clone https://github.com/lxztry/lxzclaw.git
 cd lxzclaw
+
+# 安装依赖
 npm install
+
+# 编译
 npm run build
 ```
 
-### Configuration
-
-Create `.env` file or set environment variables:
+### 2. 全局安装 (可选)
 
 ```bash
-LXZ_ANTHROPIC_API_KEY=your-api-key
-LXZ_MODEL=claude-sonnet-4-20250514
+npm install -g .
+```
+
+全局安装后，`.env` 文件会自动复制到全局模块目录。
+
+### 3. 配置
+
+创建 `.env` 文件：
+
+```bash
+# LLM Provider (可选: anthropic, minimax, glm, openrouter, openai)
+LXZ_LLM_PROVIDER=glm
+
+# GLM 配置
+LXZ_GLM_API_KEY=你的API密钥
+LXZ_GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+LXZ_MODEL=glm-4-flash
+
+# 或 MiniMax 配置
+# LXZ_LLM_PROVIDER=minimax
+# LXZ_MINIMAX_API_KEY=你的API密钥
+# LXZ_MODEL=MiniMax-M2.7
+
+# 或 OpenRouter 配置
+# LXZ_LLM_PROVIDER=openrouter
+# LXZ_OPENROUTER_API_KEY=你的API密钥
+# LXZ_MODEL=anthropic/claude-3.5-sonnet
+
+# 网关配置
 LXZ_GATEWAY_PORT=18789
+LXZ_GATEWAY_HOST=127.0.0.1
+
+# 日志
+LXZ_LOG_LEVEL=info
 ```
 
-Or create `~/.lxzclaw/lxzclaw.json`:
+### 4. 运行
 
-```json
-{
-  "llm": {
-    "provider": "anthropic",
-    "apiKey": "your-api-key",
-    "model": "claude-sonnet-4-20250514"
-  }
-}
-```
-
-### Usage
-
-**Interactive CLI:**
+**交互模式 (CLI):**
 ```bash
-npm run cli
-# or
+# 全局安装后
+lxzclaw
+
+# 或直接运行
 node dist/index.js
+
+# 或开发模式
+npm run dev
 ```
 
-**Gateway Mode (for web/channels):**
+**网关模式 (HTTP/WebSocket):**
 ```bash
 npm run gateway
-# or
+# 或
 node dist/index.js gateway
 ```
 
-**Single Chat:**
+**单次对话:**
 ```bash
-node dist/index.js chat "Hello, help me write a function"
+node dist/index.js chat "帮我写一个hello world函数"
 ```
 
 **Web UI:**
-Open `http://localhost:18789` in your browser
+打开 `http://localhost:18789`
 
-## Project Structure
+## 项目结构
 
 ```
 lxzclaw/
 ├── src/
-│   ├── agent/          # Agent engine + multi-agent
-│   ├── channels/       # Feishu, CLI, Web channels
-│   ├── cli/           # Terminal UI
-│   ├── config/         # Configuration management
-│   ├── gateway/        # HTTP/WebSocket server
-│   ├── session/        # Session management
-│   ├── skills/         # Skill system
-│   ├── tools/          # Tool registry + built-in tools
-│   └── utils/          # Logger, async utilities
-├── dist/               # Compiled output
-├── SPEC.md             # Detailed specification
+│   ├── agent/          # Agent 引擎 + 多Agent协调
+│   ├── cli/           # 终端UI
+│   ├── config/        # 配置管理
+│   ├── gateway/       # HTTP/WebSocket服务器
+│   ├── session/       # 会话管理
+│   ├── tools/         # 工具注册 + 内置工具
+│   └── utils/         # 日志、工具函数
+├── dist/               # 编译输出
+├── SPEC.md             # 详细技术规格
 └── package.json
 ```
 
-## Multi-Agent System
+## LLM Provider 配置
 
-```javascript
-const { MultiAgentCoordinator, AgentTemplates } = require('lxzclaw');
+### GLM (智谱AI) - 推荐国内用户
 
-const coordinator = new MultiAgentCoordinator(config, sessionManager);
-
-// Register agents
-await coordinator.registerAgent(AgentTemplates.supervisor('SuperAgent'));
-await coordinator.registerAgent(AgentTemplates.coder('CodeBot'));
-
-// Create and execute tasks
-const task = coordinator.createTask('Write a hello world function', { priority: 'high' });
-await coordinator.executeTask(task.id);
+```bash
+LXZ_LLM_PROVIDER=glm
+LXZ_GLM_API_KEY=你的API密钥
+LXZ_GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+LXZ_MODEL=glm-4-flash
 ```
 
-## Tools
+### MiniMax
 
-| Tool | Description |
-|------|-------------|
-| `bash` | Execute shell commands |
-| `read` | Read file contents |
-| `write` | Write/create files |
-| `edit` | Edit files by replacing text |
-| `glob` | Find files by pattern |
-| `web_search` | Search the web |
-| `web_fetch` | Fetch URL content |
+```bash
+LXZ_LLM_PROVIDER=minimax
+LXZ_MINIMAX_API_KEY=你的API密钥
+LXZ_MINIMAX_BASE_URL=https://api.minimaxi.com/v1
+LXZ_MODEL=MiniMax-M2.7
+```
 
-## API Endpoints
+**注意**: MiniMax Token Plan (sk-cp- 开头) 需要OAuth认证，标准API Key (sk- 开头) 可直接使用。
+
+### OpenRouter
+
+```bash
+LXZ_LLM_PROVIDER=openrouter
+LXZ_OPENROUTER_API_KEY=你的API密钥
+LXZ_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+LXZ_MODEL=anthropic/claude-3.5-sonnet
+```
+
+### Anthropic
+
+```bash
+LXZ_LLM_PROVIDER=anthropic
+LXZ_ANTHROPIC_API_KEY=你的API密钥
+LXZ_MODEL=claude-sonnet-4-20250514
+```
+
+## 工具
+
+| 工具 | 说明 | 需要确认 |
+|------|------|---------|
+| `bash` | 执行Shell命令 | ✅ |
+| `read` | 读取文件内容 | ❌ |
+| `write` | 写入/创建文件 | ✅ |
+| `edit` | 编辑文件 (替换文本) | ✅ |
+| `glob` | 按模式查找文件 | ❌ |
+| `web_search` | 搜索网页 | ❌ |
+| `web_fetch` | 获取URL内容 | ❌ |
+
+> 注：敏感操作 (bash, write, edit) 会记录到审计日志
+
+## API 接口
 
 ### REST API
 
-- `GET /health` - Health check
-- `POST /api/chat` - Send chat message
-- `GET /api/sessions` - List sessions
-- `GET /api/sessions/:id` - Get session
-- `GET /api/tools` - List tools
-
-### Observability API
-
-- `GET /api/observability/health` - System health status
-- `GET /api/observability/metrics` - All metrics
-- `GET /api/observability/metrics?name=xxx` - Specific metric
-- `GET /api/observability/tasks` - Task history
-- `GET /api/observability/summary` - System summary
-- `POST /api/observability/webhooks` - Register webhook
+- `GET /health` - 健康检查
+- `POST /api/chat` - 发送聊天消息
+- `GET /api/sessions` - 列出会话
+- `GET /api/sessions/:id` - 获取会话
+- `GET /api/tools` - 列出工具
 
 ### WebSocket
 
-Connect to `ws://localhost:18789` and send JSON messages:
+连接 `ws://localhost:18789`，发送JSON消息：
 
 ```javascript
-// Create session
+// 创建会话
 ws.send(JSON.stringify({ type: 'create_session', payload: { type: 'chat' } }));
 
-// Send message
+// 发送消息
 ws.send(JSON.stringify({ type: 'chat', payload: { message: 'Hello!' } }));
 ```
 
-## Development
+## 常见问题
+
+### 1. Windows 上运行 lxzclaw 提示找不到命令
+
+确保 Node.js 全局目录在 PATH 中：
+- 打开 "系统属性" → "高级" → "环境变量"
+- 在用户变量 PATH 中添加 `D:\NodeJS\node_global`
+
+或直接使用完整路径：
+```bash
+node D:\code\lxzclaw\dist\index.js
+```
+
+### 2. API Key 无效
+
+- 检查 Key 是否正确
+- 确认账户有余额
+- MiniMax Token Plan Key 需要OAuth认证
+
+### 3. 模型不存在
+
+确保 `LXZ_MODEL` 与 Provider 支持的模型名称匹配。
+
+## 开发
 
 ```bash
-# Build
+# 编译
 npm run build
 
-# Development with watch
+# 开发模式 (热重载)
 npm run dev
 
-# Run tests
+# 运行测试
 npm test
 ```
 

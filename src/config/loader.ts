@@ -2,11 +2,36 @@
  * Configuration loader - loads from file, env, and defaults
  */
 
+import dotenv from 'dotenv';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { Config, ConfigSchema, defaultConfig, resolvePath } from './schema.js';
 import { logger } from '../utils/logger.js';
+
+// Load dotenv synchronously at startup - try multiple locations
+function loadDotenvSync(): void {
+  const locations = [
+    path.join(process.cwd(), '.env'),
+    path.join(os.homedir(), '.env'),
+    'D:\\NodeJS\\node_global\\node_modules\\lxzclaw\\.env',
+    'D:\\NodeJS\\node_modules\\lxzclaw\\.env',
+  ];
+  
+  for (const loc of locations) {
+    try {
+      const result = dotenv.config({ path: loc });
+      if (result.parsed && Object.keys(result.parsed).length > 0) {
+        logger.debug(`Loaded .env from: ${loc}`);
+        break;
+      }
+    } catch {
+      // Continue
+    }
+  }
+}
+
+loadDotenvSync();
 
 const CONFIG_FILE_NAME = 'lxzclaw.json';
 const CONFIG_DIR_NAME = '.lxzclaw';
@@ -88,8 +113,26 @@ export async function loadConfig(): Promise<Config> {
   if (process.env.LXZ_ANTHROPIC_API_KEY) {
     result.llm.apiKey = process.env.LXZ_ANTHROPIC_API_KEY;
   }
+  if (process.env.LXZ_ANTHROPIC_BASE_URL) {
+    result.llm.baseUrl = process.env.LXZ_ANTHROPIC_BASE_URL;
+  }
   if (process.env.LXZ_MINIMAX_API_KEY) {
     result.llm.apiKey = process.env.LXZ_MINIMAX_API_KEY;
+  }
+  if (process.env.LXZ_MINIMAX_BASE_URL) {
+    result.llm.baseUrl = process.env.LXZ_MINIMAX_BASE_URL;
+  }
+  if (process.env.LXZ_OPENROUTER_API_KEY) {
+    result.llm.apiKey = process.env.LXZ_OPENROUTER_API_KEY;
+  }
+  if (process.env.LXZ_OPENROUTER_BASE_URL) {
+    result.llm.baseUrl = process.env.LXZ_OPENROUTER_BASE_URL;
+  }
+  if (process.env.LXZ_GLM_API_KEY) {
+    result.llm.apiKey = process.env.LXZ_GLM_API_KEY;
+  }
+  if (process.env.LXZ_GLM_BASE_URL) {
+    result.llm.baseUrl = process.env.LXZ_GLM_BASE_URL;
   }
   if (process.env.LXZ_OPENAI_API_KEY) {
     result.llm.apiKey = process.env.LXZ_OPENAI_API_KEY;

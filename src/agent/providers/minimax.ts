@@ -24,7 +24,7 @@ export class MiniMaxProvider {
 
   constructor(config: LLMConfig) {
     this.apiKey = config.apiKey ?? '';
-    this.baseUrl = config.baseUrl ?? 'https://api.minimax.chat/v';
+    this.baseUrl = config.baseUrl ?? 'https://api.minimax.io/v1';
     this.model = config.model;
   }
 
@@ -32,10 +32,13 @@ export class MiniMaxProvider {
     messages: Array<{ role: string; content: string }>,
     _tools?: Array<{ name: string; description: string; input_schema: Record<string, unknown> }>
   ): Promise<LLMResponse> {
-    logger.debug(`MiniMax chat: ${messages.length} messages`);
+    logger.debug(`MiniMax chat: ${messages.length} messages, model: ${this.model}, baseUrl: ${this.baseUrl}`);
 
     try {
-      const response = await fetch(`${this.baseUrl}/text/chatcompletion_v2`, {
+      const url = `${this.baseUrl}/chat/completions`;
+      logger.debug(`MiniMax request URL: ${url}`);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,12 +50,21 @@ export class MiniMaxProvider {
         }),
       });
 
+      logger.debug(`MiniMax response status: ${response.status}`);
+      const responseText = await response.text();
+      
+      if (responseText.startsWith('<')) {
+        logger.error(`MiniMax returned HTML instead of JSON: ${responseText.substring(0, 200)}`);
+        throw new Error(`MiniMax API error: Received HTML response instead of JSON. Status: ${response.status}`);
+      }
+      
+      logger.debug(`MiniMax response: ${responseText.substring(0, 500)}`);
+
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`MiniMax API error: ${response.status} - ${error}`);
+        throw new Error(`MiniMax API error: ${response.status} - ${responseText}`);
       }
 
-      const data = await response.json() as {
+      const data = JSON.parse(responseText) as {
         choices: Array<{
           message: {
             content?: string;
@@ -61,7 +73,7 @@ export class MiniMaxProvider {
             }>;
           };
         }>;
-        usage: { input_tokens: number; output_tokens: number };
+        usage: { prompt_tokens: number; completion_tokens: number };
       };
 
       const choice = data.choices[0];
@@ -75,8 +87,8 @@ export class MiniMaxProvider {
             input: JSON.parse(tc.function.arguments),
           })),
           usage: {
-            inputTokens: data.usage.input_tokens,
-            outputTokens: data.usage.output_tokens,
+            inputTokens: data.usage.prompt_tokens,
+            outputTokens: data.usage.completion_tokens,
           },
         };
       }
@@ -84,8 +96,8 @@ export class MiniMaxProvider {
       return {
         content: message.content ?? '',
         usage: {
-          inputTokens: data.usage.input_tokens,
-          outputTokens: data.usage.output_tokens,
+          inputTokens: data.usage.prompt_tokens,
+          outputTokens: data.usage.completion_tokens,
         },
       };
     } catch (error) {
@@ -100,7 +112,7 @@ export class MiniMaxProvider {
   ): AsyncGenerator<string> {
     logger.debug(`MiniMax streaming chat`);
 
-    const response = await fetch(`${this.baseUrl}/text/chatcompletion_v2`, {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -113,8 +125,11 @@ export class MiniMaxProvider {
       }),
     });
 
+    logger.debug(`MiniMax stream response status: ${response.status}`);
+
     if (!response.ok || !response.body) {
-      throw new Error(`MiniMax stream error: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`MiniMax stream error: ${response.status} - ${errorText}`);
     }
 
     const reader = response.body.getReader();
@@ -125,6 +140,7 @@ export class MiniMaxProvider {
       if (done) break;
 
       const chunk = decoder.decode(value);
+      logger.debug(`MiniMax raw chunk: ${chunk.substring(0, 200)}`);
       const lines = chunk.split('\n').filter(line => line.trim());
 
       for (const line of lines) {
@@ -135,6 +151,7 @@ export class MiniMaxProvider {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
+                logger.debug(`MiniMax yielding: ${content}`);
                 yield content;
               }
             } catch {

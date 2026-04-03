@@ -9,10 +9,20 @@ import { createWebSearchTool, createWebFetchTool } from './web.js';
 
 export function registerBuiltInTools(): void {
   // Register built-in tools
-  toolRegistry.register(createBashTool());
+  const bashTool = createBashTool();
+  bashTool.requireConfirm = true;
+  toolRegistry.register(bashTool);
+
   toolRegistry.register(createReadTool());
-  toolRegistry.register(createWriteTool());
-  toolRegistry.register(createEditTool());
+
+  const writeTool = createWriteTool();
+  writeTool.requireConfirm = true;
+  toolRegistry.register(writeTool);
+
+  const editTool = createEditTool();
+  editTool.requireConfirm = true;
+  toolRegistry.register(editTool);
+
   toolRegistry.register(createGlobTool());
   toolRegistry.register(createWebSearchTool());
   toolRegistry.register(createWebFetchTool());

@@ -8,7 +8,6 @@ import { AgentEngine } from './agent/index.js';
 import { GatewayServer } from './gateway/index.js';
 import { registerBuiltInTools } from './tools/index.js';
 import { logger, setLogLevel, LogLevel } from './utils/logger.js';
-import { randomUUID } from 'crypto';
 
 export { Config } from './config/index.js';
 export { SessionManager } from './session/index.js';
@@ -90,7 +89,8 @@ export async function main(): Promise<void> {
   const { agent, sessionManager } = await createLxzClaw();
   
   const { TUI } = await import('./cli/tui.js');
-  const tui = new TUI(agent, sessionManager, randomUUID());
+  const session = sessionManager.create({ type: 'cli' });
+  const tui = new TUI(agent, sessionManager, session.id);
   await tui.start();
 
   const shutdown = async () => {

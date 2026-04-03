@@ -42,6 +42,17 @@ export class GatewayServer {
   }
 
   private setupMiddleware(): void {
+    // Security headers
+    this.app.use((_req, res, next) => {
+      res.setHeader('X-DNS-Prefetch-Control', 'off');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
+      next();
+    });
+
     // CORS
     this.app.use((req, res, next) => {
       const origin = req.headers.origin;

@@ -6,7 +6,6 @@ import readline from 'readline';
 import { AgentEngine } from '../agent/index.js';
 import { SessionManager } from '../session/index.js';
 import * as ansi from './ansi.js';
-import { logger } from '../utils/logger.js';
 
 export class TUI {
   private agent: AgentEngine;
@@ -54,6 +53,15 @@ export class TUI {
 
     this.history.push(trimmed);
 
+    // Check session exists
+    const session = await this.sessionManager.get(this.sessionId);
+    if (!session) {
+      process.stdout.write(`\n${ansi.error('Error: Session not found, creating new session...')}\n`);
+      const newSession = this.sessionManager.create({ type: 'cli' });
+      this.sessionId = newSession.id;
+      process.stdout.write(`${ansi.success('New session created: ' + this.sessionId)}\n`);
+    }
+
     if (await this.handleCommand(trimmed)) {
       this.rl.prompt();
       return;
@@ -63,15 +71,9 @@ export class TUI {
     process.stdout.write('\n');
 
     try {
-      const response = await this.agent.processMessage(this.sessionId, trimmed, {
-        stream: true,
-        onChunk: (chunk) => {
-          process.stdout.write(chunk);
-        },
-      });
-
-      process.stdout.write('\n\n');
-      logger.debug(`Response: ${response.substring(0, 100)}...`);
+      process.stdout.write(`${ansi.tool('Thinking...')}\n`);
+      const response = await this.agent.processMessage(this.sessionId, trimmed);
+      process.stdout.write('\n' + response + '\n\n');
     } catch (err) {
       process.stdout.write(`\n${ansi.error('Error: ' + (err instanceof Error ? err.message : String(err)))}\n`);
     }
