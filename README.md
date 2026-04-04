@@ -19,15 +19,40 @@
 ### 🔥 核心差异化
 | 能力 | Claude Code | OpenClaw | LxzClaw |
 |------|-------------|-----------|----------|
+| Agent Teams | ✅ | ❌ | ✅ **完整实现** |
 | Subagent | ✅ | ✅ | ✅ |
 | 多Agent路由 | ✅ Teams | ✅ 多规则路由 | ✅ |
-| Agent通信 | ✅ Mailbox | ⚠️ 需通过父Agent | ✅ |
+| Agent通信 | ✅ Mailbox | ⚠️ 需通过父Agent | ✅ **Mailbox直连** |
 | 预设工作流 | ❌ | ⚠️ Lobster需配置 | ✅ **开箱即用** |
 | 中文优化 | ❌ | ❌ | ✅ **原生中文** |
 | 国内模型 | ❌ | ⚠️ Ollama中转 | ✅ **直接支持** |
 | 多通道 | ❌ | ✅ 全通道 | ✅ |
 | MCP协议 | ✅ | ⚠️ Built-in | ✅ |
 | 自托管 | ❌ | ✅ | ✅ |
+
+### 🤖 Agent Teams (类 Claude Code 架构)
+
+LxzClaw 支持真正的 Agent Teams 架构：
+
+```typescript
+import { AgentTeam, AgentTeamFactory } from './agent/teams.js';
+
+// 创建代码审查 Team
+const team = AgentTeamFactory.createCodeReviewTeam();
+
+// 添加任务
+team.createTask({ title: '审查登录功能', priority: 'high' });
+
+// 运行 Team (Team Lead 自动协调)
+await team.run();
+```
+
+**Team 特性：**
+- ✅ **Team Lead** - 主管协调任务分配
+- ✅ **Mailbox** - Agent 间直接消息传递
+- ✅ **共享 Task List** - 任务状态同步
+- ✅ **独立 Member** - 每个 Member 有自己的上下文
+- ✅ **状态追踪** - 实时监控所有 Agent 状态
 
 ### 🏗️ Architecture
 
