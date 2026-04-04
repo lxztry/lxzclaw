@@ -6,12 +6,24 @@
 
 ### 🎯 Core Capabilities
 - **多LLM Provider**: 支持 Anthropic、MiniMax、GLM、OpenRouter、OpenAI 等
-- **MCP 支持**: 可连接 Model Context Protocol 服务器，扩展工具能力
+- **多Agent协作**: 完整的工作流系统，支持 Supervisor/Worker 模式
+- **内置MCP服务器**: Filesystem、Git、WebSearch 开箱即用
+- **预设工作流**: 代码审查、DevOps、文档生成、Bug修复、特性开发
+- **中文Prompt优化**: 原生中文代码注释、文档生成、审查反馈
 - **多通道接入**: CLI / Web UI / WebSocket / Discord / Telegram / 飞书
 - **工具系统**: bash, read, write, edit, glob, web搜索
 - **智能Agent**: 反思机制、自动重试、任务规划
 - **Skills系统**: 热加载技能模块，支持依赖管理
 - **会话管理**: 持久化会话历史，支持多种会话类型
+
+### 🔥 核心差异化
+| 能力 | Claude Code | OpenClaw | LxzClaw |
+|------|-------------|-----------|----------|
+| 多Agent协作 | ❌ | ✅ 基础 | ✅ **完整工作流** |
+| MCP生态 | ❌ | ❌ | ✅ **内置服务器** |
+| 中文优化 | ❌ | ❌ | ✅ **原生中文** |
+| 国内模型 | ❌ | ❌ | ✅ **GLM/MiniMax** |
+| 预设工作流 | ❌ | ❌ | ✅ **开箱即用** |
 
 ### 🏗️ Architecture
 
