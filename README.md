@@ -183,24 +183,45 @@ LXZ_MODEL=claude-sonnet-4-20250514
 
 ## MCP 支持
 
-通过 MCP (Model Context Protocol) 扩展工具能力。在配置文件中添加：
+LxzClaw 支持 MCP (Model Context Protocol)，内置三种服务器，开箱即用：
+
+### 内置 MCP 服务器
+
+| 服务器 | 工具数 | 说明 |
+|--------|--------|------|
+| **Filesystem** | 8个 | 文件系统操作 |
+| **Git** | 8个 | Git 版本控制 |
+| **Web Search** | 4个 | 网页搜索和获取 |
+
+详细文档：[MCP_EXTENSIONS.md](MCP_EXTENSIONS.md)
+
+### 快速启用
+
+```yaml
+mcp:
+  filesystem:
+    enabled: true
+  git:
+    enabled: true
+  websearch:
+    enabled: true
+```
+
+### 第三方 MCP 服务器
 
 ```json
 {
   "mcp": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/docs"],
-      "enabled": true
-    }
+    "servers": [
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "enabled": true
+      }
+    ]
   }
 }
-```
-
-或使用环境变量：
-```bash
-LXZ_MCP_FILESYSTEM_COMMAND=npx
-LXZ_MCP_FILESYSTEM_ARGS=["-y", "@modelcontextprotocol/server-filesystem", "~/docs"]
 ```
 
 ## Skills 系统
