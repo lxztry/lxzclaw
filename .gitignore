@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.*.local
 
+# Custom skills (用户自定义技能)
+skills/
+
 # IDE
 .idea/
 .vscode/
