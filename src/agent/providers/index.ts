@@ -6,7 +6,7 @@ import { LLMConfig } from '../../config/index.js';
 import { AnthropicProvider } from './anthropic.js';
 import { MiniMaxProvider } from './minimax.js';
 
-export interface LLMResponse {
+export type LLMResponse = {
   content: string;
   toolCalls?: Array<{
     name: string;
@@ -16,12 +16,12 @@ export interface LLMResponse {
     inputTokens: number;
     outputTokens: number;
   };
-}
+};
 
-export interface LLMProvider {
+export type LLMProvider = {
   chat(messages: Array<{ role: string; content: string }>, tools?: Array<{ name: string; description: string; input_schema: Record<string, unknown> }>): Promise<LLMResponse>;
   chatStream(messages: Array<{ role: string; content: string }>, tools?: Array<{ name: string; description: string; input_schema: Record<string, unknown> }>): AsyncGenerator<string>;
-}
+};
 
 export function createLLMProvider(config: LLMConfig): LLMProvider {
   switch (config.provider) {

@@ -12,6 +12,9 @@ import { AgentEngine } from '../agent/index.js';
 import { WSHandler } from './ws-handler.js';
 import { logger } from '../utils/logger.js';
 import { AuthManager, RateLimiter } from '../auth/index.js';
+import { FeishuChannel } from '../channels/index.js';
+import { toolRegistry } from '../tools/index.js';
+import { observability } from '../observability/index.js';
 
 export class GatewayServer {
   private app: express.Application;
@@ -23,6 +26,7 @@ export class GatewayServer {
   private sessionManager: SessionManager;
   private authManager: AuthManager;
   private rateLimiter: RateLimiter;
+  private feishuChannel: FeishuChannel | null = null;
 
   constructor(config: Config, agent: AgentEngine, sessionManager: SessionManager) {
     this.config = config;
@@ -188,7 +192,6 @@ export class GatewayServer {
 
     // Tools
     this.app.get('/api/tools', (_req, res) => {
-      const { toolRegistry } = require('../tools/index.js');
       res.json({ tools: toolRegistry.getToolSchemas() });
     });
 
@@ -201,13 +204,11 @@ export class GatewayServer {
 
     // Observability endpoints
     this.app.get('/api/observability/health', (_req, res) => {
-      const { observability } = require('../observability/index.js');
       const agents = this.sessionManager.listSessions().length;
       res.json(observability.getHealthStatus(agents));
     });
 
     this.app.get('/api/observability/metrics', (req, res) => {
-      const { observability } = require('../observability/index.js');
       const since = req.query.since ? parseInt(req.query.since as string) : undefined;
       if (req.query.name) {
         res.json({ metrics: observability.getMetrics(req.query.name as string, since) });
@@ -217,19 +218,16 @@ export class GatewayServer {
     });
 
     this.app.get('/api/observability/tasks', (req, res) => {
-      const { observability } = require('../observability/index.js');
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const since = req.query.since ? parseInt(req.query.since as string) : undefined;
       res.json({ tasks: observability.getTaskHistory(limit, since) });
     });
 
     this.app.get('/api/observability/summary', (_req, res) => {
-      const { observability } = require('../observability/index.js');
       res.json(observability.getSummary());
     });
 
     this.app.post('/api/observability/webhooks', (req, res) => {
-      const { observability } = require('../observability/index.js');
       const { url, events, headers } = req.body;
       observability.registerWebhook({ url, events: events ?? ['*'], headers });
       res.json({ success: true });
@@ -243,7 +241,7 @@ export class GatewayServer {
     });
   }
 
-  async start(): Promise<void> {
+async start(): Promise<void> {
     const { port, host } = this.config.gateway;
 
     return new Promise((resolve, reject) => {
@@ -256,9 +254,13 @@ export class GatewayServer {
           this.wsHandler!.handleConnection(ws);
         });
 
-        this.server!.listen(port, host, () => {
+        this.server!.listen(port, host, async () => {
           logger.info(`Gateway listening on http://${host}:${port}`);
           logger.info(`WebSocket available at ws://${host}:${port}`);
+
+          // Initialize Feishu channel AFTER server is created (so we can pass app/server)
+          await this.initFeishuChannel();
+
           resolve();
         });
 
@@ -270,6 +272,54 @@ export class GatewayServer {
         reject(error);
       }
     });
+  }
+
+  private async initFeishuChannel(): Promise<void> {
+    const appId = process.env.FEISHU_APP_ID;
+    const appSecret = process.env.FEISHU_APP_SECRET;
+
+    if (!appId || !appSecret) {
+      logger.info('Feishu channel not configured (missing APP_ID or APP_SECRET)');
+      return;
+    }
+
+    try {
+      this.feishuChannel = new FeishuChannel();
+
+      this.feishuChannel.on('message', async (msg) => {
+        logger.info(`Feishu message received from ${msg.senderName}: ${msg.content}`);
+
+        // Create a new session for this Feishu user
+        const session = this.sessionManager.create({
+          type: 'chat',  // Use 'chat' type for Feishu conversations
+          userId: msg.senderId
+        });
+
+        logger.info(`Created Feishu session: ${session.id} for user ${msg.senderName}`);
+
+        const response = await this.agent.processMessage(session.id, msg.content);
+        await this.feishuChannel!.send({
+          recipientId: msg.senderId,
+          content: response,
+          metadata: { msgType: 'text' }
+        });
+      });
+
+      // Pass shared app and server so Feishu webhook runs on same port as gateway
+      // Default to WebSocket mode (no public URL needed), can be overridden via connectionMode config
+      const connectionMode = (process.env.FEISHU_CONNECTION_MODE as 'websocket' | 'webhook') || 'websocket';
+      await this.feishuChannel.initialize({
+        type: 'feishu',
+        enabled: true,
+        connectionMode,
+        sharedApp: this.app,
+        sharedServer: this.server ?? undefined
+      });
+      await this.feishuChannel.start();
+      logger.info('Feishu channel initialized (webhook on same port as gateway)');
+    } catch (error) {
+      logger.error('Failed to initialize Feishu channel:', error);
+    }
   }
 
   async stop(): Promise<void> {
