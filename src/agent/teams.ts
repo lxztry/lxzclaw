@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger.js';
+import type { AgentConfig } from './multi-agent.js';
 
 // ============== 类型定义 ==============
 
@@ -100,7 +101,7 @@ export class MailboxImpl implements Mailbox {
     this.address = address;
   }
 
-  send(to: string, content: string, type: Message['type'] = 'message'): void {
+  send(to: string, content: string, type: Message['type'] = 'request'): void {
     const message: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       from: this.address,
@@ -418,7 +419,7 @@ export class AgentTeam extends EventEmitter {
   /**
    * 找到合适的 Member
    */
-  private findSuitableMember(task: Task): AgentInstance | undefined {
+  private findSuitableMember(_task: Task): AgentInstance | undefined {
     // 简单策略：找到空闲的 Member
     for (const member of this.members.values()) {
       if (member.status === 'idle') {

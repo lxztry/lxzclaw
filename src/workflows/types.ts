@@ -3,7 +3,6 @@
  * 预设工作流模板 - 开箱即用的 Agent 协作流程
  */
 
-import { AgentConfig, AgentTemplates } from '../agent/multi-agent.js';
 import { logger } from '../utils/logger.js';
 
 export interface WorkflowStep {

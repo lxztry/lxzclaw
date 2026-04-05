@@ -308,10 +308,9 @@ ${context ? `\n相关上下文：\n${context}` : ''}
 // ============== 中文 Prompt 生成器 ==============
 
 export class ChinesePromptGenerator {
-  private config: ChinesePromptConfig;
-
   constructor(config: Partial<ChinesePromptConfig> = {}) {
-    this.config = { ...DEFAULT_ZH_CONFIG, ...config };
+    // Intentionally unused for future use
+    void config;
   }
 
   /**
