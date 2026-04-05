@@ -190,6 +190,122 @@ export class GatewayServer {
       res.json({ session });
     });
 
+    // ============== Channel Message History APIs ==============
+    // Extensible design for multi-channel message history
+
+    // List all channels with session counts
+    this.app.get('/api/channels', async (_req, res) => {
+      const allSessions = this.sessionManager.listSessions();
+      const channelMap = new Map<string, { sessionCount: number; latestMessage: number }>();
+
+      for (const sessionId of allSessions) {
+        const session = await this.sessionManager.get(sessionId);
+        if (!session) continue;
+
+        const channelId = session.metadata?.channelId || 'unknown';
+        const existing = channelMap.get(channelId);
+
+        if (existing) {
+          existing.sessionCount++;
+          if (session.updatedAt > existing.latestMessage) {
+            existing.latestMessage = session.updatedAt;
+          }
+        } else {
+          channelMap.set(channelId, {
+            sessionCount: 1,
+            latestMessage: session.updatedAt
+          });
+        }
+      }
+
+      const channels = Array.from(channelMap.entries()).map(([id, data]) => ({
+        id,
+        sessionCount: data.sessionCount,
+        latestMessage: data.latestMessage,
+        latestMessageAt: new Date(data.latestMessage).toISOString()
+      }));
+
+      res.json({ channels });
+    });
+
+    // Get sessions for a specific channel
+    this.app.get('/api/channels/:channel/sessions', async (req, res) => {
+      const { channel } = req.params;
+      const allSessions = this.sessionManager.listSessions();
+      const channelSessions: any[] = [];
+
+      for (const sessionId of allSessions) {
+        const session = await this.sessionManager.get(sessionId);
+        if (!session) continue;
+
+        // Match by channelId in metadata or session type
+        const sessionChannel = session.metadata?.channelId || session.type;
+        if (sessionChannel !== channel) continue;
+
+        const lastMessage = session.messages.length > 0
+          ? session.messages[session.messages.length - 1]
+          : null;
+
+        channelSessions.push({
+          id: session.id,
+          userId: session.metadata?.userId || 'unknown',
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          messageCount: session.messages.length,
+          lastMessage: lastMessage ? {
+            role: lastMessage.role,
+            content: lastMessage.content.substring(0, 100),
+            timestamp: lastMessage.timestamp
+          } : null
+        });
+      }
+
+      // Sort by latest activity
+      channelSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+
+      res.json({ channel, sessions: channelSessions });
+    });
+
+    // Get messages for a specific session in a channel
+    this.app.get('/api/channels/:channel/sessions/:sessionId', async (req, res) => {
+      const { channel, sessionId } = req.params;
+      const session = await this.sessionManager.get(sessionId);
+
+      if (!session) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+      }
+
+      // Verify channel matches
+      const sessionChannel = session.metadata?.channelId || session.type;
+      if (sessionChannel !== channel) {
+        res.status(404).json({ error: 'Session not found for this channel' });
+        return;
+      }
+
+      const messages = session.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        timestampAt: new Date(msg.timestamp).toLocaleString('zh-CN')
+      }));
+
+      res.json({
+        session: {
+          id: session.id,
+          userId: session.metadata?.userId,
+          channel,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          messageCount: messages.length
+        },
+        messages
+      });
+    });
+
+    // ============== End Channel APIs ==============
+
     // Tools
     this.app.get('/api/tools', (_req, res) => {
       res.json({ tools: toolRegistry.getToolSchemas() });

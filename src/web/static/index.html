@@ -297,6 +297,9 @@
         <div class="nav-item" data-view="chat">
           <span>💬</span> Chat
         </div>
+        <div class="nav-item" data-view="messages">
+          <span>📨</span> Messages
+        </div>
         <div class="nav-item" data-view="agents">
           <span>🤖</span> Agents
         </div>
@@ -415,6 +418,31 @@
             </div>
           </div>
         </div>
+
+        <!-- Messages View (Multi-Channel) -->
+        <div id="messagesView" class="hidden" style="display: flex; height: 100%;">
+          <!-- Channel List -->
+          <div style="width: 180px; border-right: 1px solid var(--border); padding: 16px; overflow-y: auto;">
+            <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 8px;">CHANNELS</div>
+            <div id="channelList">
+              <div class="empty-state" style="padding: 10px;">Loading...</div>
+            </div>
+          </div>
+          <!-- Session List -->
+          <div style="width: 280px; border-right: 1px solid var(--border); padding: 16px; overflow-y: auto;">
+            <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 8px;">SESSIONS</div>
+            <div id="sessionList">
+              <div class="empty-state" style="padding: 10px;">Select a channel</div>
+            </div>
+          </div>
+          <!-- Message History -->
+          <div style="flex: 1; padding: 16px; overflow-y: auto;">
+            <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 8px;">MESSAGES</div>
+            <div id="messageHistory">
+              <div class="empty-state">Select a session to view messages</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -430,11 +458,15 @@
     const views = {
       dashboard: document.getElementById('dashboardView'),
       chat: document.getElementById('chatView'),
+      messages: document.getElementById('messagesView'),
       agents: document.getElementById('agentsView'),
       tasks: document.getElementById('tasksView'),
       metrics: document.getElementById('metricsView'),
     };
-    
+
+    let currentChannel = null;
+    let currentSession = null;
+
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', () => {
@@ -442,26 +474,191 @@
         switchView(view);
       });
     });
-    
+
     function switchView(view) {
       currentView = view;
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.querySelector(`[data-view="${view}"]`).classList.add('active');
-      
+
       Object.values(views).forEach(v => v.classList.add('hidden'));
       views[view].classList.remove('hidden');
-      
+      views[view].style.display = view === 'messages' ? 'flex' : 'block';
+
       document.getElementById('viewTitle').textContent = {
         dashboard: 'Dashboard',
         chat: 'Chat',
+        messages: 'Messages',
         agents: 'Agents',
         tasks: 'Tasks',
         metrics: 'Metrics'
       }[view];
-      
+
       if (view === 'dashboard') loadDashboard();
       if (view === 'tasks') loadTasks();
       if (view === 'metrics') loadMetrics();
+      if (view === 'messages') loadChannels();
+    }
+
+    // ============== Messages View (Multi-Channel) ==============
+
+    async function loadChannels() {
+      try {
+        const res = await fetch('/api/channels');
+        const data = await res.json();
+
+        const channelList = document.getElementById('channelList');
+        if (!data.channels || data.channels.length === 0) {
+          channelList.innerHTML = '<div class="empty-state" style="padding:10px;">No channels</div>';
+          return;
+        }
+
+        channelList.innerHTML = data.channels.map(ch => `
+          <div class="nav-item ${currentChannel === ch.id ? 'active' : ''}"
+               onclick="selectChannel('${ch.id}')" style="font-size: 0.9em;">
+            <span>${getChannelIcon(ch.id)}</span>
+            <span>${getChannelName(ch.id)}</span>
+            <span style="margin-left: auto; font-size: 0.75em; color: var(--text-secondary);">${ch.sessionCount}</span>
+          </div>
+        `).join('');
+
+        // Auto-select first channel
+        if (!currentChannel && data.channels.length > 0) {
+          selectChannel(data.channels[0].id);
+        }
+      } catch (e) {
+        console.error('Failed to load channels:', e);
+      }
+    }
+
+    function getChannelIcon(channelId) {
+      const icons = {
+        'feishu': '📨',
+        'wechat': '💬',
+        'discord': '🎮',
+        'telegram': '✈️',
+        'slack': '📊',
+        'chat': '💬',
+        'cli': '⌨️',
+        'task': '📋'
+      };
+      return icons[channelId] || '📱';
+    }
+
+    function getChannelName(channelId) {
+      const names = {
+        'feishu': 'Feishu',
+        'wechat': 'WeChat',
+        'discord': 'Discord',
+        'telegram': 'Telegram',
+        'slack': 'Slack',
+        'chat': 'Chat',
+        'cli': 'CLI',
+        'task': 'Task'
+      };
+      return names[channelId] || channelId;
+    }
+
+    async function selectChannel(channelId) {
+      currentChannel = channelId;
+      currentSession = null;
+      loadChannels(); // Update active state
+      document.getElementById('messageHistory').innerHTML = '<div class="empty-state">Select a session</div>';
+
+      try {
+        const res = await fetch(`/api/channels/${channelId}/sessions`);
+        const data = await res.json();
+
+        const sessionList = document.getElementById('sessionList');
+        if (!data.sessions || data.sessions.length === 0) {
+          sessionList.innerHTML = '<div class="empty-state" style="padding:10px;">No sessions</div>';
+          return;
+        }
+
+        sessionList.innerHTML = data.sessions.map(s => `
+          <div class="nav-item ${currentSession === s.id ? 'active' : ''}"
+               onclick="selectSession('${s.id}')" style="font-size: 0.85em; padding: 8px 12px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">${s.userId || 'Unknown'}</div>
+              <div style="font-size: 0.75em; color: var(--text-secondary);">
+                ${s.messageCount} msgs · ${formatTime(s.updatedAt)}
+              </div>
+              ${s.lastMessage ? `<div style="font-size: 0.75em; color: var(--accent); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${s.lastMessage.role}: ${s.lastMessage.content}
+              </div>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load sessions:', e);
+      }
+    }
+
+    async function selectSession(sessionId) {
+      currentSession = sessionId;
+
+      // Update session list active state
+      document.querySelectorAll('#sessionList .nav-item').forEach((el, i) => {
+        const sessions = document.querySelectorAll('#sessionList .nav-item');
+        if (sessions[i] && sessions[i].onclick.toString().includes(sessionId)) {
+          el.classList.add('active');
+        } else if (sessions[i]) {
+          el.classList.remove('active');
+        }
+      });
+
+      try {
+        const res = await fetch(`/api/channels/${currentChannel}/sessions/${sessionId}`);
+        const data = await res.json();
+
+        const history = document.getElementById('messageHistory');
+        if (!data.messages || data.messages.length === 0) {
+          history.innerHTML = '<div class="empty-state">No messages</div>';
+          return;
+        }
+
+        history.innerHTML = `
+          <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+            <div style="font-size: 0.85em;">
+              <strong>Session:</strong> ${data.session.id}<br>
+              <strong>User:</strong> ${data.session.userId || 'Unknown'}<br>
+              <strong>Messages:</strong> ${data.session.messageCount}<br>
+              <strong>Created:</strong> ${new Date(data.session.createdAt).toLocaleString('zh-CN')}
+            </div>
+          </div>
+          ${data.messages.map(m => `
+            <div style="margin-bottom: 12px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-weight: 600; color: ${m.role === 'user' ? 'var(--accent)' : 'var(--info)'};">
+                  ${m.role === 'user' ? '👤' : '🤖'} ${m.role}
+                </span>
+                <span style="font-size: 0.75em; color: var(--text-secondary);">
+                  ${m.timestampAt}
+                </span>
+              </div>
+              <div style="font-size: 0.9em; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(m.content)}</div>
+            </div>
+          `).join('')}
+        `;
+      } catch (e) {
+        console.error('Failed to load messages:', e);
+      }
+    }
+
+    function formatTime(timestamp) {
+      const d = new Date(timestamp);
+      const now = new Date();
+      const diff = now - d;
+
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      return d.toLocaleDateString('zh-CN');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
     
     // WebSocket
