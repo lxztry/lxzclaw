@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LxzClaw - AI Agent Gateway</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        
+        /* Hero */
+        .hero { text-align: center; padding: 60px 20px; }
+        .hero h1 { font-size: 3rem; margin-bottom: 16px; }
+        .hero h1 span { color: #00d4ff; }
+        .hero p { font-size: 1.2rem; color: #a0a0a0; max-width: 600px; margin: 0 auto 30px; }
+        .badge-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
+        .badge { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; }
+        
+        .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: 600; transition: transform 0.2s; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: linear-gradient(90deg, #00d4ff, #7c3aed); color: #fff; }
+        .btn-secondary { background: transparent; border: 2px solid #00d4ff; color: #00d4ff; }
+        
+        /* Features */
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin: 60px 0; }
+        .feature { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 28px; border-left: 4px solid #00d4ff; }
+        .feature h3 { font-size: 1.1rem; margin-bottom: 10px; color: #00d4ff; }
+        .feature p { color: #888; line-height: 1.6; font-size: 0.95rem; }
+        
+        /* Providers */
+        .providers { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; margin: 40px 0; }
+        .providers h2 { text-align: center; margin-bottom: 24px; }
+        .provider-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .provider { background: rgba(255,255,255,0.08); padding: 16px 24px; border-radius: 12px; text-align: center; }
+        .provider-name { font-weight: 600; color: #00d4ff; }
+        
+        /* Code */
+        .code-section { background: #0d1117; border-radius: 12px; padding: 24px; margin: 40px 0; overflow-x: auto; }
+        .code-section pre { font-family: 'Fira Code', Consolas, monospace; font-size: 0.9rem; color: #c9d1d9; line-height: 1.6; }
+        .code-section h3 { color: #00d4ff; margin-bottom: 16px; }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .comment { color: #8b949e; }
+        
+        /* Architecture */
+        .arch { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; margin: 40px 0; }
+        .arch pre { font-family: monospace; font-size: 0.85rem; color: #888; line-height: 1.8; }
+        
+        /* Footer */
+        footer { text-align: center; padding: 40px; color: #666; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 60px; }
+        footer a { color: #00d4ff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <h1>🦞 <span>LxzClaw</span></h1>
+            <p>AI Agent Gateway - 融合多LLM Provider与Claude Code交互模式</p>
+            
+            <div class="badge-row">
+                <span class="badge">🔥 多LLM支持</span>
+                <span class="badge">⚡ MCP扩展</span>
+                <span class="badge">💬 多通道接入</span>
+                <span class="badge">🛠️ 工具系统</span>
+            </div>
+            
+            <div class="cta-row">
+                <a href="https://github.com/lxztry/lxzclaw" class="btn btn-primary">⭐ Star on GitHub</a>
+                <a href="https://github.com/lxztry/lxzclaw#快速开始" class="btn btn-secondary">📖 快速开始</a>
+            </div>
+        </section>
+        
+        <section class="features">
+            <div class="feature">
+                <h3>🤖 多LLM Provider</h3>
+                <p>支持 Anthropic Claude、MiniMax、GLM、OpenRouter、OpenAI 等多种大模型，按需切换</p>
+            </div>
+            <div class="feature">
+                <h3>🔌 MCP 支持</h3>
+                <p>连接 Model Context Protocol 服务器，扩展工具能力，支持 Filesystem 等</p>
+            </div>
+            <div class="feature">
+                <h3>📡 多通道接入</h3>
+                <p>CLI / Web UI / WebSocket / Discord / Telegram / 飞书，随时随地调用</p>
+            </div>
+            <div class="feature">
+                <h3>🛡️ 智能Agent</h3>
+                <p>反思机制、自动重试、任务规划，复杂任务自动分解执行</p>
+            </div>
+        </section>
+        
+        <section class="providers">
+            <h2>支持的 LLM Provider</h2>
+            <div class="provider-grid">
+                <div class="provider"><div class="provider-name">Anthropic</div><div>Claude</div></div>
+                <div class="provider"><div class="provider-name">MiniMax</div><div>M2.7 / M2</div></div>
+                <div class="provider"><div class="provider-name">GLM</div><div>glm-4-flash</div></div>
+                <div class="provider"><div class="provider-name">OpenRouter</div><div>多模型</div></div>
+                <div class="provider"><div class="provider-name">OpenAI</div><div>GPT-4</div></div>
+            </div>
+        </section>
+        
+        <section class="code-section">
+            <h3>🚀 快速开始</h3>
+<pre><span class="comment"># 安装</span>
+git clone https://github.com/lxztry/lxzclaw.git
+<span class="keyword">cd</span> lxzclaw
+npm install
+
+<span class="comment"># 配置 .env</span>
+<span class="keyword">echo</span> <span class="string">"LXZ_LLM_PROVIDER=glm" > .env</span>
+<span class="keyword">echo</span> <span class="string">"LXZ_GLM_API_KEY=你的密钥" >> .env</span>
+
+<span class="comment"># 运行</span>
+npm run dev</pre>
+        </section>
+        
+        <section class="arch">
+            <h2 style="margin-bottom: 20px; text-align: center;">🏗️ 架构</h2>
+<pre>
+LxzClaw
+├── Gateway Server (HTTP + WebSocket)
+├── Agent Engine (LLM + Tools)
+│   ├── Smart Agent (反思/重试/规划)
+│   └── MCP Client (协议支持)
+├── Multi-Agent Coordinator
+├── Channel Plugins (CLI, Web, Discord, Telegram, 飞书)
+├── Skill System (热加载, 依赖管理)
+└── Audit Logger (安全审计)</pre>
+        </section>
+        
+        <section class="features">
+            <div class="feature">
+                <h3>⚙️ 工具系统</h3>
+                <p>bash, read, write, edit, glob, web_search, web_fetch 开箱即用</p>
+            </div>
+            <div class="feature">
+                <h3>📝 Skills系统</h3>
+                <p>热加载技能模块，支持依赖管理，随时扩展能力</p>
+            </div>
+            <div class="feature">
+                <h3>💾 会话管理</h3>
+                <p>持久化会话历史，支持多种会话类型</p>
+            </div>
+        </section>
+        
+        <footer>
+            <p>🦞 LxzClaw by <a href="https://github.com/lxztry">@lxztry</a></p>
+            <p style="margin-top: 10px;"><a href="https://github.com/lxztry/lxzclaw">GitHub</a> · MIT License</p>
+        </footer>
+    </div>
+</body>
+</html>
